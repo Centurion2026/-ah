@@ -2,21 +2,26 @@
 <html lang="hr">
 <head>
     <meta charset="UTF-8">
-    <title>Moja Šahovska Aplikacija</title>
+    <title>Sah (by Alan Catovic)</title>
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #2c3e50; color: white; }
-        #board { width: 400px; margin: 20px; border: 5px solid #34495e; }
-        .info { margin-top: 10px; font-size: 1.2rem; }
-        button { padding: 10px 20px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; background: #2c3e50; color: white; margin: 0; padding: 20px; }
+        h1 { margin-bottom: 10px; color: #ecf0f1; }
+        #board { width: 400px; max-width: 90vw; margin: 20px; border: 8px solid #34495e; border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .info { margin-top: 10px; font-size: 1.2rem; font-weight: bold; background: #34495e; padding: 10px 20px; border-radius: 20px; }
+        button { margin-top: 20px; padding: 12px 25px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; font-size: 1rem; transition: background 0.3s; }
+        button:hover { background: #c0392b; }
     </style>
 </head>
 <body>
 
-    <h2>Šah Protiv Sebe (ili prijatelja)</h2>
+    <h1>Sah</h1>
+    <p style="margin-top: 0; color: #bdc3c7;">by Alan Catovic</p>
+    
     <div id="board"></div>
+    
     <div class="info">Status: <span id="status">Bijeli je na potezu</span></div>
-    <br>
+    
     <button onclick="resetGame()">Nova igra</button>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
@@ -29,10 +34,7 @@
         var $status = $('#status');
 
         function onDragStart (source, piece, position, orientation) {
-            // Ne dopusti pomicanje ako je igra gotova
             if (game.game_over()) return false;
-
-            // Dopusti pomicanje samo figura onoga tko je na redu
             if ((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
                 (game.turn() === 'b' && piece.search(/^w/) !== -1)) {
                 return false;
@@ -40,21 +42,17 @@
         }
 
         function onDrop (source, target) {
-            // Provjeri je li potez legalan
             var move = game.move({
                 from: source,
                 to: target,
-                promotion: 'q' // Uvijek promovira u kraljicu radi jednostavnosti
+                promotion: 'q' 
             });
 
-            // Ako je potez nelegalan, vrati figuru nazad
             if (move === null) return 'snapback';
-
             updateStatus();
         }
 
         function onSnapEnd () {
-            // Ažuriraj poziciju ploče nakon što animacija završi (bitno za en passant, rokadu...)
             board.position(game.fen());
         }
 
@@ -63,26 +61,28 @@
             var moveColor = (game.turn() === 'w') ? 'Bijeli' : 'Crni';
 
             if (game.in_checkmate()) {
-                status = 'Igra gotova, ' + moveColor + ' je matiran!';
+                status = 'KRAJ: ' + moveColor + ' je matiran!';
             } else if (game.in_draw()) {
-                status = 'Igra gotova, remi!';
+                status = 'KRAJ: Remi!';
             } else {
                 status = moveColor + ' je na potezu';
                 if (game.in_check()) {
-                    status += ', ŠAH!';
+                    status += ' (ŠAH!)';
                 }
             }
-
             $status.html(status);
         }
 
         var config = {
             draggable: true,
             position: 'start',
+            // OVO POPRAVLJA FIGURE:
+            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
             onDragStart: onDragStart,
             onDrop: onDrop,
             onSnapEnd: onSnapEnd
         };
+        
         board = ChessBoard('board', config);
 
         function resetGame() {
