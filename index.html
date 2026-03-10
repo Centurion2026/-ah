@@ -5,15 +5,31 @@
     <title>Sah (by Alan Catovic)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
     <style>
-        body { display: flex; flex-direction: column; align-items: center; background: #2c3e50; padding: 20px; }
-        h1 { color: white; }
-        #board { width: 500px; max-width: 95vw; border: 5px solid #34495e; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; background: #1a1a2e; color: #ffffff; padding: 20px; margin: 0; }
+        h1 { margin-bottom: 20px; letter-spacing: 2px; text-transform: uppercase; color: #00d2ff; text-shadow: 0 0 10px rgba(0,210,255,0.3); }
+        #board { width: 550px; max-width: 95vw; border: 8px solid #16213e; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .controls { margin-top: 25px; display: flex; gap: 10px; }
+        button { padding: 12px 24px; cursor: pointer; background: #0f3460; color: white; border: 2px solid #e94560; border-radius: 5px; font-weight: bold; transition: all 0.3s; }
+        button:hover { background: #e94560; transform: translateY(-2px); }
+        button.active { background: #e94560; box-shadow: 0 0 15px rgba(233, 69, 96, 0.4); }
+        .reset-btn { margin-top: 15px; background: transparent; border: 1px solid #533483; color: #533483; }
+        .reset-btn:hover { background: #533483; color: white; }
     </style>
 </head>
 <body>
 
-    <h1>Sah (by Alan Catovic)</h1>
+    <h1>Sah</h1>
+    <p style="margin-top: -15px; margin-bottom: 20px; color: #00d2ff; opacity: 0.7;">by Alan Catovic</p>
+
     <div id="board"></div>
+
+    <div class="controls">
+        <button onclick="setLvl(1, this)">Početnik</button>
+        <button onclick="setLvl(2, this)" class="active">Srednji</button>
+        <button onclick="setLvl(3, this)">Napredni</button>
+    </div>
+
+    <button class="reset-btn" onclick="location.reload()">Resetiraj igru</button>
 
     <audio id="move-snd" src="https://images.chesscomfiles.com/chess-themes/sounds/_standard/default/move-self.mp3"></audio>
     <audio id="win-snd" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
@@ -24,41 +40,63 @@
 
     <script>
         var game = new Chess();
+        var difficulty = 2;
+        var selectedSquare = null;
+
         var board = Chessboard('board', {
             position: 'start',
+            draggable: false,
             pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
         });
 
-        var selectedSquare = null;
+        function setLvl(lvl, btn) {
+            difficulty = lvl;
+            $('.controls button').removeClass('active');
+            $(btn).addClass('active');
+        }
 
-        function playSound(type) {
-            var audio = document.getElementById(type === 'win' ? 'win-snd' : 'move-snd');
-            audio.currentTime = 0;
-            audio.play().catch(e => console.log("Klikni na ploču za aktivaciju zvuka"));
+        function playSnd(type) {
+            var s = document.getElementById(type === 'win' ? 'win-snd' : 'move-snd');
+            s.currentTime = 0;
+            s.play().catch(() => {});
+        }
+
+        function aiMove() {
+            var moves = game.moves();
+            if (moves.length === 0) return;
+
+            var move;
+            if (difficulty === 1) {
+                move = moves[Math.floor(Math.random() * moves.length)];
+            } else if (difficulty === 2) {
+                // Srednji: Uzima figure ako može
+                var captures = moves.filter(m => m.includes('x'));
+                move = captures.length > 0 ? captures[0] : moves[Math.floor(Math.random() * moves.length)];
+            } else {
+                // Napredni: Traži šah ili mat, inače uzima najjaču figuru
+                var priority = moves.filter(m => m.includes('#') || m.includes('+') || m.includes('x'));
+                move = priority.length > 0 ? priority[0] : moves[0];
+            }
+
+            game.move(move);
+            board.position(game.fen());
+            playSnd('move');
+            if (game.game_over()) playSnd('win');
         }
 
         $('#board').on('click', '.square-55d63', function() {
             var square = $(this).attr('data-square');
-
+            
             if (selectedSquare) {
                 var move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
                 if (move) {
                     board.position(game.fen());
-                    playSound('move');
+                    playSnd('move');
                     selectedSquare = null;
-
                     if (game.game_over()) {
-                        playSound('win');
+                        playSnd('win');
                     } else {
-                        // AI potez
-                        window.setTimeout(function() {
-                            var moves = game.moves();
-                            var aiMove = moves[Math.floor(Math.random() * moves.length)];
-                            game.move(aiMove);
-                            board.position(game.fen());
-                            playSound('move');
-                            if (game.game_over()) playSound('win');
-                        }, 500);
+                        setTimeout(aiMove, 600);
                     }
                 } else {
                     selectedSquare = square;
