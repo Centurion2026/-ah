@@ -7,14 +7,14 @@
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #2c3e50; color: white; padding: 20px; }
         #board { width: 500px; max-width: 95vw; border: 5px solid #34495e; }
-        .info { margin-top: 20px; font-size: 1.5rem; }
+        .info { margin-top: 20px; font-size: 1.3rem; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <h1>Sah (by Alan Catovic)</h1>
     <div id="board"></div>
-    <div class="info" id="status">Pomiči figure klikom</div>
+    <div class="info" id="status">Tvoj red (Bijeli)</div>
 
     <audio id="move-snd" src="https://images.chesscomfiles.com/chess-themes/sounds/_standard/default/move-self.mp3"></audio>
     <audio id="win-snd" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
@@ -32,6 +32,12 @@
 
         var selectedSquare = null;
 
+        function playSound(type) {
+            var audio = document.getElementById(type === 'win' ? 'win-snd' : 'move-snd');
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log("Audio blocked"));
+        }
+
         $('#board').on('click', '.square-55d63', function() {
             var square = $(this).attr('data-square');
 
@@ -39,18 +45,32 @@
                 var move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
                 if (move) {
                     board.position(game.fen());
-                    document.getElementById('move-snd').play();
-                    
-                    if (game.game_over()) {
-                        document.getElementById('win-snd').play();
-                        $('#status').text("KRAJ IGRE!");
-                    }
+                    playSound('move');
                     selectedSquare = null;
+
+                    if (game.game_over()) {
+                        playSound('win');
+                        $('#status').text("KRAJ IGRE!");
+                    } else {
+                        // AI potez
+                        window.setTimeout(function() {
+                            var moves = game.moves();
+                            var aiMove = moves[Math.floor(Math.random() * moves.length)];
+                            game.move(aiMove);
+                            board.position(game.fen());
+                            playSound('move');
+                            if (game.game_over()) {
+                                playSound('win');
+                                $('#status').text("KRAJ IGRE!");
+                            }
+                        }, 500);
+                    }
                 } else {
                     selectedSquare = square;
                 }
             } else {
-                selectedSquare = square;
+                var piece = game.get(square);
+                if (piece && piece.color === 'w') selectedSquare = square;
             }
         });
     </script>
