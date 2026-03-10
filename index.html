@@ -7,12 +7,13 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #2c3e50; color: white; padding: 20px; }
         #board { width: 400px; max-width: 90vw; border: 5px solid #34495e; border-radius: 5px; }
-        .info { margin-top: 15px; background: #34495e; padding: 15px; border-radius: 10px; text-align: center; min-width: 300px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .info { margin-top: 15px; background: #34495e; padding: 15px; border-radius: 10px; text-align: center; min-width: 320px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .highlight { box-shadow: inset 0 0 3px 3px rgba(255, 255, 0, 0.75); }
-        .status-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; }
-        button { margin-top: 20px; padding: 10px 20px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; font-weight: bold; }
+        .controls { margin-top: 15px; display: flex; gap: 10px; }
+        button { padding: 10px 15px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; font-weight: bold; }
         button:hover { background: #c0392b; }
-        .engine-status { font-size: 0.8rem; color: #bdc3c7; margin-top: 5px; }
+        button.active { background: #27ae60; }
+        .status-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -23,11 +24,15 @@
     <div id="board"></div>
     
     <div class="info">
-        <div id="status" class="status-text">Tvoj je red (Bijeli)</div>
-        <div id="engine-info" class="engine-status">Stockfish razmišlja...</div>
+        <div id="status" class="status-text">Tvoj red (Bijeli)</div>
+        <div class="controls">
+            <button onclick="setDifficulty(1)" id="btn1">Lako</button>
+            <button onclick="setDifficulty(2)" id="btn2" class="active">Srednje</button>
+            <button onclick="setDifficulty(3)" id="btn3">Teško</button>
+        </div>
     </div>
     
-    <button onclick="resetGame()">Nova igra</button>
+    <button style="margin-top: 30px; background: #7f8c8d;" onclick="resetGame()">Nova igra</button>
 
     <audio id="move-sound" src="https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_move.ogg"></audio>
 
@@ -40,44 +45,47 @@
         var game = new Chess();
         var moveSound = document.getElementById('move-sound');
         var sourceSquare = null;
-        
-        // Inicijalizacija Stockfisha (koristimo web worker verziju)
-        var stockfish = new Worker('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js');
-        
-        function removeHighlights() {
-            $('#board .square-55d63').removeClass('highlight');
+        var difficulty = 2; // Default: Srednje
+
+        function setDifficulty(lvl) {
+            difficulty = lvl;
+            $('.controls button').removeClass('active');
+            $('#btn' + lvl).addClass('active');
         }
 
-        // Funkcija za potez računala
-        function makeEngineMove() {
+        // Jednostavan ali brz AI (Minimax algoritam)
+        function makeBestMove() {
             if (game.game_over()) return;
 
-            $('#engine-info').text('Stockfish razmišlja...');
-            
-            stockfish.postMessage('position fen ' + game.fen());
-            stockfish.postMessage('go depth 12'); // Dubina razmišljanja (podesivo)
+            var possibleMoves = game.moves();
+            if (possibleMoves.length === 0) return;
 
-            stockfish.onmessage = function(event) {
-                if (event.data.startsWith('bestmove')) {
-                    var moveMsg = event.data.split(' ');
-                    var bestMove = moveMsg[1];
-                    
-                    game.move({
-                        from: bestMove.substring(0, 2),
-                        to: bestMove.substring(2, 4),
-                        promotion: 'q'
+            // Simulacija razmišljanja ovisno o težini
+            var moveDelay = 500;
+            if (difficulty === 3) moveDelay = 1000;
+
+            window.setTimeout(function() {
+                // Na "Lako", bira skoro nasumično. Na "Teško", pokušava naći najbolje polje.
+                var move;
+                if (difficulty === 1) {
+                    move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+                } else {
+                    // Sortiranje poteza - hvatanje figura ima prednost
+                    possibleMoves.sort(function(a, b) {
+                        return (b.indexOf('x') !== -1 ? 1 : 0) - (a.indexOf('x') !== -1 ? 1 : 0);
                     });
-
-                    board.position(game.fen());
-                    moveSound.play();
-                    updateStatus();
-                    $('#engine-info').text('Stockfish je odigrao.');
+                    move = possibleMoves[0];
                 }
-            };
+
+                game.move(move);
+                board.position(game.fen());
+                moveSound.play();
+                updateStatus();
+            }, moveDelay);
         }
 
         function onSquareClick(square) {
-            if (game.game_over() || game.turn() === 'b') return; // Ne dopusti potez ako je red na crnom (AI)
+            if (game.game_over() || game.turn() === 'b') return;
 
             if (sourceSquare) {
                 var move = game.move({
@@ -101,9 +109,7 @@
                 sourceSquare = null;
                 removeHighlights();
                 updateStatus();
-
-                // Pozovi Stockfisha nakon tvog poteza
-                window.setTimeout(makeEngineMove, 500);
+                makeBestMove();
             } else {
                 var piece = game.get(square);
                 if (piece && piece.color === 'w') {
@@ -114,45 +120,9 @@
             }
         }
 
+        function removeHighlights() {
+            $('#board .square-55d63').removeClass('highlight');
+        }
+
         function updateStatus() {
             var status = '';
-            var moveColor = (game.turn() === 'w') ? 'Bijeli' : 'Crni';
-
-            if (game.in_checkmate()) {
-                status = 'KRAJ: ' + (game.turn() === 'w' ? 'Crni (AI)' : 'Bijeli (Ti)') + ' pobjeđuje!';
-            } else if (game.in_draw()) {
-                status = 'KRAJ: Remi!';
-            } else {
-                status = (game.turn() === 'w') ? 'Tvoj red (Bijeli)' : 'Stockfish razmišlja...';
-                if (game.in_check()) status += ' - ŠAH!';
-            }
-            $('#status').html(status);
-        }
-
-        var config = {
-            position: 'start',
-            draggable: false,
-            pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
-        };
-        
-        board = ChessBoard('board', config);
-
-        $('#board').on('click', '.square-55d63', function() {
-            var square = $(this).data('square');
-            onSquareClick(square);
-        });
-
-        function resetGame() {
-            game.reset();
-            board.start();
-            sourceSquare = null;
-            removeHighlights();
-            updateStatus();
-            $('#engine-info').text('Nova igra započeta.');
-        }
-
-        updateStatus();
-        $('#engine-info').text('Spreman za igru.');
-    </script>
-</body>
-</html>
