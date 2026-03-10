@@ -10,9 +10,16 @@
     </style>
 </head>
 <body>
-
+    
+// Ovo radi jer je stockfish.js u istoj mapi na tvom GitHubu
+var stockfish = new Worker('stockfish.js');
     <h1>Šah vs Stockfish</h1>
     <div id="board"></div>
+
+    var board = Chessboard('board', {
+    position: 'start',
+    pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
+});
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
