@@ -21,23 +21,22 @@
     <script>
         var game = new Chess();
         
-        // Inicijalizacija ploče
-        var board = Chessboard('board', {
+        // Eksplicitno definiramo gdje su slike
+        var config = {
             position: 'start',
-            pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
-        });
+            pieceTheme: 'https://raw.githubusercontent.com/oakmac/chessboardjs/master/website/img/chesspieces/wikipedia/{piece}.png'
+        };
+        var board = Chessboard('board', config);
 
-        // Inicijalizacija Stockfisha (radi samo ako je stranica na GitHub Pages)
-        try {
-            var stockfish = new Worker('stockfish-18.js');
-            stockfish.onmessage = function(e) {
-                if (e.data.startsWith('bestmove')) {
-                    var m = e.data.split(' ')[1];
-                    game.move({ from: m.substring(0,2), to: m.substring(2,4) });
-                    board.position(game.fen());
-                }
-            };
-        } catch(e) { console.log("Stockfish nije učitan"); }
+        // Pokušaj učitati Stockfish
+        var stockfish = new Worker('stockfish-18.js');
+        stockfish.onmessage = function(e) {
+            if (e.data.startsWith('bestmove')) {
+                var m = e.data.split(' ')[1];
+                game.move({ from: m.substring(0,2), to: m.substring(2,4) });
+                board.position(game.fen());
+            }
+        };
 
         // Klik sistem
         var selected = null;
