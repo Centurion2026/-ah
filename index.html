@@ -3,141 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Šah (by Alan Catovic)</title>
-    <link rel="manifest" href="./manifest.json">
+    <title>Šah (Profesionalni Stockfish)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #0f0c29; color: #fff; padding: 10px; margin: 0; overflow-x: hidden; }
-        h1 { font-size: 1.5rem; margin: 10px 0; color: #00d2ff; text-transform: uppercase; letter-spacing: 2px; }
-        #board { width: 95vw; max-width: 500px; border: 5px solid #16213e; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .controls { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 95vw; max-width: 500px; }
-        button { padding: 10px; cursor: pointer; background: #1a1a2e; color: white; border: 2px solid #e94560; border-radius: 5px; font-weight: bold; font-size: 0.8rem; }
-        button.active { background: #e94560; box-shadow: 0 0 15px #e94560; }
-        #game-result { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; font-weight: 900; color: #ff0044; text-shadow: 0 0 30px #000; display: none; pointer-events: none; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #0f0c29; color: #fff; padding: 10px; margin: 0; }
+        h1 { font-size: 1.5rem; color: #00d2ff; }
+        #board { width: 95vw; max-width: 500px; border: 5px solid #16213e; border-radius: 8px; }
+        .controls { margin-top: 20px; display: flex; gap: 10px; }
+        button { padding: 12px; cursor: pointer; background: #1a1a2e; color: white; border: 2px solid #e94560; border-radius: 5px; font-weight: bold; }
+        button.active { background: #e94560; }
     </style>
 </head>
 <body>
 
-    <h1>Šah</h1>
+    <h1>Šah (Stockfish Engine)</h1>
     <div id="board"></div>
-    <div id="game-result">MAT!</div>
 
     <div class="controls">
-        <button onclick="setLvl(1, this)">Početnik</button>
-        <button onclick="setLvl(2, this)">Srednji</button>
-        <button onclick="setLvl(3, this)">Napredni</button>
-        <button onclick="setLvl(4, this)" class="active">Profesionalni</button>
+        <button onclick="setSkill(0)">Početnik</button>
+        <button onclick="setSkill(10)">Srednji</button>
+        <button onclick="setSkill(20)" class="active">Profesionalni</button>
     </div>
-
-    <button style="margin-top: 15px; width: 95vw; max-width: 500px; border-color: #00d2ff; color: #00d2ff;" onclick="location.reload()">Nova Igra</button>
-
-    <audio id="move-snd" src="https://images.chesscomfiles.com/chess-themes/sounds/_standard/default/move-self.mp3"></audio>
-    <audio id="win-snd" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 
     <script>
-        // Registracija PWA Service Workera
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js');
-        }
-
         var game = new Chess();
-        var difficulty = 4;
-        var selectedSquare = null;
-        var weights = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
-        var pst = {
-            p: [ [0,0,0,0,0,0,0,0],[50,50,50,50,50,50,50,50],[10,10,20,30,30,20,10,10],[5,5,10,25,25,10,5,5],[0,0,0,20,20,0,0,0],[5,-5,-10,0,0,-10,-5,5],[5,10,10,-20,-20,10,10,5],[0,0,0,0,0,0,0,0] ],
-            n: [ [-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,0,0,0,-20,-40],[-30,0,10,15,15,10,0,-30],[-30,5,15,20,20,15,5,-30],[-30,0,15,20,20,15,0,-30],[-30,5,10,15,15,10,5,-30],[-40,-20,0,5,5,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50] ]
-        };
-
-        function evaluateBoard(g) {
-            var total = 0;
-            var b = g.board();
-            for (var i=0; i<8; i++) for (var j=0; j<8; j++) {
-                var p = b[i][j];
-                if (p) total += (p.color === 'w' ? 1 : -1) * (weights[p.type] + (pst[p.type] ? pst[p.type][p.color === 'w' ? 7-i : i][j] : 0));
-            }
-            return total;
-        }
-
-        function minimax(g, depth, alpha, beta, isMax) {
-            if (depth === 0) return -evaluateBoard(g);
-            var moves = g.moves();
-            if (isMax) {
-                var best = -99999;
-                for (var i=0; i<moves.length; i++) {
-                    g.move(moves[i]);
-                    best = Math.max(best, minimax(g, depth-1, alpha, beta, false));
-                    g.undo(); alpha = Math.max(alpha, best);
-                    if (beta <= alpha) break;
-                }
-                return best;
-            } else {
-                var best = 99999;
-                for (var i=0; i<moves.length; i++) {
-                    g.move(moves[i]);
-                    best = Math.min(best, minimax(g, depth-1, alpha, beta, true));
-                    g.undo(); beta = Math.min(beta, best);
-                    if (beta <= alpha) break;
-                }
-                return best;
-            }
-        }
-
-        function getBestMove() {
-            var moves = game.moves();
-            var bestMove = null;
-            var bestVal = 99999;
-            var d = (difficulty >= 3) ? 3 : 1;
-            for (var i=0; i<moves.length; i++) {
-                game.move(moves[i]);
-                var v = minimax(game, d - 1, -100000, 100000, true);
-                game.undo();
-                if (v <= bestVal) { bestVal = v; bestMove = moves[i]; }
-            }
-            return bestMove;
-        }
-
+        var stockfish = new Worker('stockfish.js'); // Povezuje se na tvoj fajl
+        
         var board = Chessboard('board', {
             position: 'start',
-            draggable: false,
+            draggable: true,
+            onDrop: onDrop,
             pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
         });
 
-        function setLvl(lvl, btn) {
-            difficulty = lvl;
-            $('.controls button').removeClass('active');
-            $(btn).addClass('active');
-        }
-
-        function aiMove() {
-            var m = getBestMove();
-            if (!m) return;
-            game.move(m);
+        function onDrop(source, target) {
+            var move = game.move({ from: source, to: target, promotion: 'q' });
+            if (move === null) return 'snapback';
+            
             board.position(game.fen());
-            document.getElementById('move-snd').play();
-            if (game.in_checkmate()) { $('#game-result').show(); document.getElementById('win-snd').play(); }
+            
+            // Šaljemo potez mašini
+            stockfish.postMessage('position fen ' + game.fen());
+            stockfish.postMessage('go depth 15'); 
         }
 
-        $('#board').on('click', '.square-55d63', function() {
-            var s = $(this).attr('data-square');
-            if (selectedSquare) {
-                var m = game.move({ from: selectedSquare, to: s, promotion: 'q' });
-                if (m) {
-                    board.position(game.fen());
-                    document.getElementById('move-snd').play();
-                    selectedSquare = null;
-                    if (!game.game_over()) setTimeout(aiMove, 300);
-                    else if(game.in_checkmate()) { $('#game-result').show(); document.getElementById('win-snd').play(); }
-                } else { selectedSquare = s; }
-            } else {
-                var p = game.get(s);
-                if (p && p.color === 'w') selectedSquare = s;
+        stockfish.onmessage = function(event) {
+            var msg = event.data;
+            if (msg.startsWith('bestmove')) {
+                var bestMove = msg.split(' ')[1];
+                game.move({ from: bestMove.substring(0,2), to: bestMove.substring(2,4) });
+                board.position(game.fen());
             }
-        });
+        };
+
+        function setSkill(level) {
+            stockfish.postMessage('setoption name Skill Level value ' + level);
+            $('.controls button').removeClass('active');
+            $(event.target).addClass('active');
+        }
     </script>
 </body>
 </html>
