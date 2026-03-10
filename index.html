@@ -7,7 +7,6 @@
     <style>
         body { background: #0f0c29; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; font-family: sans-serif; }
         #board { width: 400px; }
-        .highlight-last-move { background-color: rgba(255, 255, 0, 0.4) !important; }
     </style>
 </head>
 <body>
@@ -21,54 +20,42 @@
 
     <script>
         var game = new Chess();
-        // Ovdje koristimo točno ime fajla koje imaš na GitHubu!
-        var stockfish = new Worker('stockfish-18.js'); 
         
+        // Inicijalizacija ploče
         var board = Chessboard('board', {
             position: 'start',
-            draggable: false, // Klik sistem
             pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
         });
 
-        var selectedSquare = null;
-
-        $('#board').on('click', '.square-55d63', function() {
-            var square = $(this).attr('data-square');
-            
-            if (selectedSquare) {
-                var move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
-                if (move) {
+        // Inicijalizacija Stockfisha (radi samo ako je stranica na GitHub Pages)
+        try {
+            var stockfish = new Worker('stockfish-18.js');
+            stockfish.onmessage = function(e) {
+                if (e.data.startsWith('bestmove')) {
+                    var m = e.data.split(' ')[1];
+                    game.move({ from: m.substring(0,2), to: m.substring(2,4) });
                     board.position(game.fen());
-                    updateLastMoveHighlight(move);
+                }
+            };
+        } catch(e) { console.log("Stockfish nije učitan"); }
+
+        // Klik sistem
+        var selected = null;
+        $('#board').on('click', '.square-55d63', function() {
+            var sq = $(this).attr('data-square');
+            if (selected) {
+                var m = game.move({ from: selected, to: sq, promotion: 'q' });
+                if (m) {
+                    board.position(game.fen());
                     stockfish.postMessage('position fen ' + game.fen());
-                    stockfish.postMessage('go depth 15');
+                    stockfish.postMessage('go depth 10');
                 }
-                selectedSquare = null;
+                selected = null;
             } else {
-                var p = game.get(square);
-                if (p && p.color === 'w') {
-                    selectedSquare = square;
-                }
+                var p = game.get(sq);
+                if (p && p.color === 'w') selected = sq;
             }
         });
-
-        stockfish.onmessage = function(e) {
-            var msg = e.data;
-            if (msg.startsWith('bestmove')) {
-                var m = msg.split(' ')[1];
-                var move = game.move({ from: m.substring(0,2), to: m.substring(2,4), promotion: 'q' });
-                if (move) {
-                    board.position(game.fen());
-                    updateLastMoveHighlight(move);
-                }
-            }
-        };
-
-        function updateLastMoveHighlight(move) {
-            $('.square-55d63').removeClass('highlight-last-move');
-            $('[data-square="' + move.from + '"]').addClass('highlight-last-move');
-            $('[data-square="' + move.to + '"]').addClass('highlight-last-move');
-        }
     </script>
 </body>
 </html>
