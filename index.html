@@ -5,16 +5,15 @@
     <title>Sah (by Alan Catovic)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #2c3e50; color: white; padding: 20px; }
+        body { display: flex; flex-direction: column; align-items: center; background: #2c3e50; padding: 20px; }
+        h1 { color: white; }
         #board { width: 500px; max-width: 95vw; border: 5px solid #34495e; }
-        .info { margin-top: 20px; font-size: 1.3rem; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <h1>Sah (by Alan Catovic)</h1>
     <div id="board"></div>
-    <div class="info" id="status">Tvoj red (Bijeli)</div>
 
     <audio id="move-snd" src="https://images.chesscomfiles.com/chess-themes/sounds/_standard/default/move-self.mp3"></audio>
     <audio id="win-snd" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
@@ -35,7 +34,7 @@
         function playSound(type) {
             var audio = document.getElementById(type === 'win' ? 'win-snd' : 'move-snd');
             audio.currentTime = 0;
-            audio.play().catch(e => console.log("Audio blocked"));
+            audio.play().catch(e => console.log("Klikni na ploču za aktivaciju zvuka"));
         }
 
         $('#board').on('click', '.square-55d63', function() {
@@ -50,7 +49,6 @@
 
                     if (game.game_over()) {
                         playSound('win');
-                        $('#status').text("KRAJ IGRE!");
                     } else {
                         // AI potez
                         window.setTimeout(function() {
@@ -59,10 +57,7 @@
                             game.move(aiMove);
                             board.position(game.fen());
                             playSound('move');
-                            if (game.game_over()) {
-                                playSound('win');
-                                $('#status').text("KRAJ IGRE!");
-                            }
+                            if (game.game_over()) playSound('win');
                         }, 500);
                     }
                 } else {
