@@ -2,37 +2,34 @@
 <html lang="hr">
 <head>
     <meta charset="UTF-8">
-    <title>Sah (by Alan Catovic)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Šah (by Alan Catovic)</title>
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #0f0c29; background: linear-gradient(to bottom, #24243e, #302b63, #0f0c29); color: #fff; padding: 20px; margin: 0; min-height: 100vh; }
-        h1 { margin-bottom: 5px; color: #00d2ff; text-transform: uppercase; letter-spacing: 4px; text-shadow: 0 0 15px rgba(0, 210, 255, 0.5); }
-        .author { color: #00d2ff; opacity: 0.6; margin-bottom: 20px; font-weight: 300; }
-        #board { width: 550px; max-width: 95vw; border: 10px solid #16213e; border-radius: 10px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
-        .controls { margin-top: 25px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-        button { padding: 12px 18px; cursor: pointer; background: #1a1a2e; color: white; border: 2px solid #e94560; border-radius: 5px; font-weight: bold; transition: 0.3s; }
-        button:hover { background: #e94560; transform: translateY(-2px); }
-        button.active { background: #e94560; box-shadow: 0 0 20px #e94560; border-color: #fff; }
-        #game-result { margin-top: 20px; font-size: 3.5rem; font-weight: 900; color: #ff0044; text-shadow: 0 0 30px #ff0044; display: none; }
-        .reset-btn { margin-top: 20px; background: transparent; border: 1px solid #00d2ff; color: #00d2ff; font-size: 0.8rem; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #0f0c29; color: #fff; padding: 10px; margin: 0; overflow-x: hidden; }
+        h1 { font-size: 1.5rem; margin: 10px 0; color: #00d2ff; text-transform: uppercase; letter-spacing: 2px; }
+        #board { width: 95vw; max-width: 500px; border: 5px solid #16213e; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .controls { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 95vw; max-width: 500px; }
+        button { padding: 10px; cursor: pointer; background: #1a1a2e; color: white; border: 2px solid #e94560; border-radius: 5px; font-weight: bold; font-size: 0.8rem; }
+        button.active { background: #e94560; box-shadow: 0 0 15px #e94560; }
+        #game-result { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; font-weight: 900; color: #ff0044; text-shadow: 0 0 30px #000; display: none; pointer-events: none; }
     </style>
 </head>
 <body>
 
     <h1>Šah</h1>
-    <p class="author">by Alan Catovic</p>
-
     <div id="board"></div>
     <div id="game-result">MAT!</div>
 
     <div class="controls">
-        <button onclick="setLvl(1, this)">Početni</button>
+        <button onclick="setLvl(1, this)">Početnik</button>
         <button onclick="setLvl(2, this)">Srednji</button>
         <button onclick="setLvl(3, this)">Napredni</button>
         <button onclick="setLvl(4, this)" class="active">Profesionalni</button>
     </div>
 
-    <button class="reset-btn" onclick="location.reload()">Nova Igra</button>
+    <button style="margin-top: 15px; width: 95vw; max-width: 500px; border-color: #00d2ff; color: #00d2ff;" onclick="location.reload()">Nova Igra</button>
 
     <audio id="move-snd" src="https://images.chesscomfiles.com/chess-themes/sounds/_standard/default/move-self.mp3"></audio>
     <audio id="win-snd" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
@@ -42,33 +39,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 
     <script>
-        var game = new Chess();
-        var difficulty = 4; 
-        var selectedSquare = null;
+        // Registracija PWA Service Workera
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js');
+        }
 
-        // --- PROFESIONALNA EVALUACIJA (PST TABLICE) ---
+        var game = new Chess();
+        var difficulty = 4;
+        var selectedSquare = null;
         var weights = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
-        
         var pst = {
-            p: [ [0,  0,  0,  0,  0,  0,  0,  0],[50, 50, 50, 50, 50, 50, 50, 50],[10, 10, 20, 30, 30, 20, 10, 10],[5,  5, 10, 25, 25, 10,  5,  5],[0,  0,  0, 20, 20,  0,  0,  0],[5, -5,-10,  0,  0,-10, -5,  5],[5, 10, 10,-20,-20, 10, 10,  5],[0,  0,  0,  0,  0,  0,  0,  0] ],
-            n: [ [-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,  0,  0,  0,  0,-20,-40],[-30,  0, 10, 15, 15, 10,  0,-30],[-30,  5, 15, 20, 20, 15,  5,-30],[-30,  0, 15, 20, 20, 15,  0,-30],[-30,  5, 10, 15, 15, 10,  5,-30],[-40,-20,  0,  5,  5,  0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50] ],
-            b: [ [-20,-10,-10,-10,-10,-10,-10,-20],[-10,  0,  0,  0,  0,  0,  0,-10],[-10,  0,  5, 10, 10,  5,  0,-10],[-10,  5,  5, 10, 10,  5,  5,-10],[-10,  0, 10, 10, 10, 10,  0,-10],[-10, 10, 10, 10, 10, 10, 10,-10],[-10,  5,  0,  0,  0,  0,  5,-10],[-20,-10,-10,-10,-10,-10,-10,-20] ],
-            r: [ [0,  0,  0,  0,  0,  0,  0,  0],[5, 10, 10, 10, 10, 10, 10,  5],[-5,  0,  0,  0,  0,  0,  0, -5],[-5,  0,  0,  0,  0,  0,  0, -5],[-5,  0,  0,  0,  0,  0,  0, -5],[-5,  0,  0,  0,  0,  0,  0, -5],[-5,  0,  0,  0,  0,  0,  0, -5],[0,  0,  0,  5,  5,  0,  0,  0] ],
-            q: [ [-20,-10,-10, -5, -5,-10,-10,-20],[-10,  0,  0,  0,  0,  0,  0,-10],[-10,  0,  5,  5,  5,  5,  0,-10],[-5,  0,  5,  5,  5,  5,  0, -5],[0,  0,  5,  5,  5,  5,  0, -5],[-10,  5,  5,  5,  5,  5,  0,-10],[-10,  0,  5,  0,  0,  0,  0,-10],[-20,-10,-10, -5, -5,-10,-10,-20] ],
-            k: [ [-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-20,-30,-30,-40,-40,-30,-30,-20],[-10,-20,-20,-20,-20,-20,-20,-10],[20, 20,  0,  0,  0,  0, 20, 20],[20, 30, 10,  0,  0, 10, 30, 20] ]
+            p: [ [0,0,0,0,0,0,0,0],[50,50,50,50,50,50,50,50],[10,10,20,30,30,20,10,10],[5,5,10,25,25,10,5,5],[0,0,0,20,20,0,0,0],[5,-5,-10,0,0,-10,-5,5],[5,10,10,-20,-20,10,10,5],[0,0,0,0,0,0,0,0] ],
+            n: [ [-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,0,0,0,-20,-40],[-30,0,10,15,15,10,0,-30],[-30,5,15,20,20,15,5,-30],[-30,0,15,20,20,15,0,-30],[-30,5,10,15,15,10,5,-30],[-40,-20,0,5,5,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50] ]
         };
 
         function evaluateBoard(g) {
             var total = 0;
-            var board = g.board();
-            for (var i = 0; i < 8; i++) {
-                for (var j = 0; j < 8; j++) {
-                    var piece = board[i][j];
-                    if (piece) {
-                        var val = weights[piece.type] + pst[piece.type][piece.color === 'w' ? 7-i : i][j];
-                        total += (piece.color === 'w' ? val : -val);
-                    }
-                }
+            var b = g.board();
+            for (var i=0; i<8; i++) for (var j=0; j<8; j++) {
+                var p = b[i][j];
+                if (p) total += (p.color === 'w' ? 1 : -1) * (weights[p.type] + (pst[p.type] ? pst[p.type][p.color === 'w' ? 7-i : i][j] : 0));
             }
             return total;
         }
@@ -76,26 +66,21 @@
         function minimax(g, depth, alpha, beta, isMax) {
             if (depth === 0) return -evaluateBoard(g);
             var moves = g.moves();
-            // Move ordering
-            moves.sort((a, b) => (b.includes('x') ? 1 : 0) - (a.includes('x') ? 1 : 0));
-            
             if (isMax) {
                 var best = -99999;
-                for (var i = 0; i < moves.length; i++) {
+                for (var i=0; i<moves.length; i++) {
                     g.move(moves[i]);
-                    best = Math.max(best, minimax(g, depth-1, alpha, beta, !isMax));
-                    g.undo();
-                    alpha = Math.max(alpha, best);
+                    best = Math.max(best, minimax(g, depth-1, alpha, beta, false));
+                    g.undo(); alpha = Math.max(alpha, best);
                     if (beta <= alpha) break;
                 }
                 return best;
             } else {
                 var best = 99999;
-                for (var i = 0; i < moves.length; i++) {
+                for (var i=0; i<moves.length; i++) {
                     g.move(moves[i]);
-                    best = Math.min(best, minimax(g, depth-1, alpha, beta, !isMax));
-                    g.undo();
-                    beta = Math.min(beta, best);
+                    best = Math.min(best, minimax(g, depth-1, alpha, beta, true));
+                    g.undo(); beta = Math.min(beta, best);
                     if (beta <= alpha) break;
                 }
                 return best;
@@ -105,22 +90,17 @@
         function getBestMove() {
             var moves = game.moves();
             var bestMove = null;
-            var bestValue = 99999;
-            var depth = (difficulty === 4) ? 3 : (difficulty === 3 ? 2 : 1);
-
-            for (var i = 0; i < moves.length; i++) {
+            var bestVal = 99999;
+            var d = (difficulty >= 3) ? 3 : 1;
+            for (var i=0; i<moves.length; i++) {
                 game.move(moves[i]);
-                var val = minimax(game, depth - 1, -100000, 100000, true);
+                var v = minimax(game, d - 1, -100000, 100000, true);
                 game.undo();
-                if (val <= bestValue) {
-                    bestValue = val;
-                    bestMove = moves[i];
-                }
+                if (v <= bestVal) { bestVal = v; bestMove = moves[i]; }
             }
             return bestMove;
         }
 
-        // --- UI ---
         var board = Chessboard('board', {
             position: 'start',
             draggable: false,
@@ -134,33 +114,28 @@
         }
 
         function aiMove() {
-            var move = getBestMove();
-            if (!move) return;
-            game.move(move);
+            var m = getBestMove();
+            if (!m) return;
+            game.move(m);
             board.position(game.fen());
             document.getElementById('move-snd').play();
-            if (game.in_checkmate()) {
-                $('#game-result').show();
-                document.getElementById('win-snd').play();
-            }
+            if (game.in_checkmate()) { $('#game-result').show(); document.getElementById('win-snd').play(); }
         }
 
         $('#board').on('click', '.square-55d63', function() {
-            var square = $(this).attr('data-square');
+            var s = $(this).attr('data-square');
             if (selectedSquare) {
-                var move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
-                if (move) {
+                var m = game.move({ from: selectedSquare, to: s, promotion: 'q' });
+                if (m) {
                     board.position(game.fen());
                     document.getElementById('move-snd').play();
                     selectedSquare = null;
                     if (!game.game_over()) setTimeout(aiMove, 300);
                     else if(game.in_checkmate()) { $('#game-result').show(); document.getElementById('win-snd').play(); }
-                } else {
-                    selectedSquare = square;
-                }
+                } else { selectedSquare = s; }
             } else {
-                var p = game.get(square);
-                if (p && p.color === 'w') selectedSquare = square;
+                var p = game.get(s);
+                if (p && p.color === 'w') selectedSquare = s;
             }
         });
     </script>
