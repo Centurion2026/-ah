@@ -7,23 +7,17 @@
     <style>
         body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #2c3e50; color: white; padding: 20px; }
         #board { width: 500px; max-width: 95vw; border: 5px solid #34495e; }
-        .info-box { background: #34495e; padding: 20px; border-radius: 10px; text-align: center; width: 500px; max-width: 95vw; margin-top: 20px; }
-        button { padding: 12px 20px; cursor: pointer; background: #e74c3c; border: none; border-radius: 5px; color: white; font-weight: bold; }
-        .music-btn { background: #f1c40f; color: #333; margin-bottom: 10px; }
+        .info { margin-top: 20px; font-size: 1.5rem; }
     </style>
 </head>
 <body>
 
     <h1>Sah (by Alan Catovic)</h1>
     <div id="board"></div>
-    
-    <div class="info-box">
-        <button class="music-btn" onclick="playMusic()">🎵 Pokreni Sevdah</button>
-        <div id="status">Klikni na figuru za početak</div>
-    </div>
+    <div class="info" id="status">Pomiči figure klikom</div>
 
-    <audio id="move-sound" src="https://images.chesscomfiles.com/chess-themes/sounds/_standard/default/move-self.mp3"></audio>
-    <audio id="bg-music" loop src="https://archive.org/download/sevdah-muzika-iz-bosne/Sevdah.mp3"></audio>
+    <audio id="move-snd" src="https://images.chesscomfiles.com/chess-themes/sounds/_standard/default/move-self.mp3"></audio>
+    <audio id="win-snd" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
@@ -36,18 +30,28 @@
             pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
         });
 
-        function playMusic() {
-            var audio = document.getElementById('bg-music');
-            audio.play().then(() => { alert("Glazba svira!"); }).catch(e => { alert("Klikni negdje na stranicu pa probaj ponovo."); });
-        }
+        var selectedSquare = null;
 
-        // Osnovna logika pomicanja
         $('#board').on('click', '.square-55d63', function() {
             var square = $(this).attr('data-square');
-            // Jednostavan test - ako klikneš, odigraj potez
-            console.log("Kliknuto polje: " + square);
-            document.getElementById('move-sound').play();
-            $('#status').text("Potez: " + square);
+
+            if (selectedSquare) {
+                var move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
+                if (move) {
+                    board.position(game.fen());
+                    document.getElementById('move-snd').play();
+                    
+                    if (game.game_over()) {
+                        document.getElementById('win-snd').play();
+                        $('#status').text("KRAJ IGRE!");
+                    }
+                    selectedSquare = null;
+                } else {
+                    selectedSquare = square;
+                }
+            } else {
+                selectedSquare = square;
+            }
         });
     </script>
 </body>
