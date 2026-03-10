@@ -13,7 +13,7 @@
         button { padding: 12px 18px; cursor: pointer; background: #1a1a2e; color: white; border: 2px solid #e94560; border-radius: 5px; font-weight: bold; transition: 0.3s; }
         button:hover { background: #e94560; transform: translateY(-2px); }
         button.active { background: #e94560; box-shadow: 0 0 20px #e94560; border-color: #fff; }
-        #game-result { margin-top: 20px; font-size: 3.5rem; font-weight: 900; color: #ff0044; text-shadow: 0 0 30px #ff0044; display: none; z-index: 10; }
+        #game-result { margin-top: 20px; font-size: 3.5rem; font-weight: 900; color: #ff0044; text-shadow: 0 0 30px #ff0044; display: none; }
         .reset-btn { margin-top: 20px; background: transparent; border: 1px solid #00d2ff; color: #00d2ff; font-size: 0.8rem; }
     </style>
 </head>
@@ -26,13 +26,13 @@
     <div id="game-result">MAT!</div>
 
     <div class="controls">
-        <button onclick="setLvl(1, this)">Početnik</button>
+        <button onclick="setLvl(1, this)">Početni</button>
         <button onclick="setLvl(2, this)">Srednji</button>
         <button onclick="setLvl(3, this)">Napredni</button>
-        <button onclick="setLvl(4, this)" class="active">Profesionalac (Extra Jak)</button>
+        <button onclick="setLvl(4, this)" class="active">Profesionalni</button>
     </div>
 
-    <button class="reset-btn" onclick="location.reload()">Resetiraj igru</button>
+    <button class="reset-btn" onclick="location.reload()">Nova Igra</button>
 
     <audio id="move-snd" src="https://images.chesscomfiles.com/chess-themes/sounds/_standard/default/move-self.mp3"></audio>
     <audio id="win-snd" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
@@ -46,13 +46,16 @@
         var difficulty = 4; 
         var selectedSquare = null;
 
-        // --- AI LOGIKA ---
-        var pieceValues = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 900 };
+        // --- PROFESIONALNA EVALUACIJA (PST TABLICE) ---
+        var weights = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
         
-        // Tablica pozicija - AI zna gdje su figure najjače
         var pst = {
-            p: [ [0,0,0,0,0,0,0,0],[5,5,5,5,5,5,5,5],[1,1,2,3,3,2,1,1],[0.5,0.5,1,2.5,2.5,1,0.5,0.5],[0,0,0,2,2,0,0,0],[0.5,-0.5,-1,0,0,-1,-0.5,0.5],[0.5,1,1,-2,-2,1,1,0.5],[0,0,0,0,0,0,0,0] ],
-            n: [ [-5,-4,-3,-3,-3,-3,-4,-5],[-4,-2,0,0,0,0,-2,-4],[-3,0,1,1.5,1.5,1,0,-3],[-3,0.5,1.5,2,2,1.5,0.5,-3],[-3,0,1.5,2,2,1.5,0,-3],[-3,0.5,1,1.5,1.5,1,0.5,-3],[-4,-2,0,0.5,0.5,0,-2,-4],[-5,-4,-3,-3,-3,-3,-4,-5] ]
+            p: [ [0,  0,  0,  0,  0,  0,  0,  0],[50, 50, 50, 50, 50, 50, 50, 50],[10, 10, 20, 30, 30, 20, 10, 10],[5,  5, 10, 25, 25, 10,  5,  5],[0,  0,  0, 20, 20,  0,  0,  0],[5, -5,-10,  0,  0,-10, -5,  5],[5, 10, 10,-20,-20, 10, 10,  5],[0,  0,  0,  0,  0,  0,  0,  0] ],
+            n: [ [-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,  0,  0,  0,  0,-20,-40],[-30,  0, 10, 15, 15, 10,  0,-30],[-30,  5, 15, 20, 20, 15,  5,-30],[-30,  0, 15, 20, 20, 15,  0,-30],[-30,  5, 10, 15, 15, 10,  5,-30],[-40,-20,  0,  5,  5,  0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50] ],
+            b: [ [-20,-10,-10,-10,-10,-10,-10,-20],[-10,  0,  0,  0,  0,  0,  0,-10],[-10,  0,  5, 10, 10,  5,  0,-10],[-10,  5,  5, 10, 10,  5,  5,-10],[-10,  0, 10, 10, 10, 10,  0,-10],[-10, 10, 10, 10, 10, 10, 10,-10],[-10,  5,  0,  0,  0,  0,  5,-10],[-20,-10,-10,-10,-10,-10,-10,-20] ],
+            r: [ [0,  0,  0,  0,  0,  0,  0,  0],[5, 10, 10, 10, 10, 10, 10,  5],[-5,  0,  0,  0,  0,  0,  0, -5],[-5,  0,  0,  0,  0,  0,  0, -5],[-5,  0,  0,  0,  0,  0,  0, -5],[-5,  0,  0,  0,  0,  0,  0, -5],[-5,  0,  0,  0,  0,  0,  0, -5],[0,  0,  0,  5,  5,  0,  0,  0] ],
+            q: [ [-20,-10,-10, -5, -5,-10,-10,-20],[-10,  0,  0,  0,  0,  0,  0,-10],[-10,  0,  5,  5,  5,  5,  0,-10],[-5,  0,  5,  5,  5,  5,  0, -5],[0,  0,  5,  5,  5,  5,  0, -5],[-10,  5,  5,  5,  5,  5,  0,-10],[-10,  0,  5,  0,  0,  0,  0,-10],[-20,-10,-10, -5, -5,-10,-10,-20] ],
+            k: [ [-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-20,-30,-30,-40,-40,-30,-30,-20],[-10,-20,-20,-20,-20,-20,-20,-10],[20, 20,  0,  0,  0,  0, 20, 20],[20, 30, 10,  0,  0, 10, 30, 20] ]
         };
 
         function evaluateBoard(g) {
@@ -62,7 +65,7 @@
                 for (var j = 0; j < 8; j++) {
                     var piece = board[i][j];
                     if (piece) {
-                        var val = pieceValues[piece.type] + (pst[piece.type] ? pst[piece.type][i][j] : 0);
+                        var val = weights[piece.type] + pst[piece.type][piece.color === 'w' ? 7-i : i][j];
                         total += (piece.color === 'w' ? val : -val);
                     }
                 }
@@ -70,24 +73,27 @@
             return total;
         }
 
-        function alphaBeta(g, depth, alpha, beta, isMax) {
+        function minimax(g, depth, alpha, beta, isMax) {
             if (depth === 0) return -evaluateBoard(g);
             var moves = g.moves();
+            // Move ordering
+            moves.sort((a, b) => (b.includes('x') ? 1 : 0) - (a.includes('x') ? 1 : 0));
+            
             if (isMax) {
-                var best = -9999;
+                var best = -99999;
                 for (var i = 0; i < moves.length; i++) {
                     g.move(moves[i]);
-                    best = Math.max(best, alphaBeta(g, depth-1, alpha, beta, !isMax));
+                    best = Math.max(best, minimax(g, depth-1, alpha, beta, !isMax));
                     g.undo();
                     alpha = Math.max(alpha, best);
                     if (beta <= alpha) break;
                 }
                 return best;
             } else {
-                var best = 9999;
+                var best = 99999;
                 for (var i = 0; i < moves.length; i++) {
                     g.move(moves[i]);
-                    best = Math.min(best, alphaBeta(g, depth-1, alpha, beta, !isMax));
+                    best = Math.min(best, minimax(g, depth-1, alpha, beta, !isMax));
                     g.undo();
                     beta = Math.min(beta, best);
                     if (beta <= alpha) break;
@@ -99,12 +105,12 @@
         function getBestMove() {
             var moves = game.moves();
             var bestMove = null;
-            var bestValue = 9999;
-            var depth = (difficulty === 4) ? 3 : 2;
+            var bestValue = 99999;
+            var depth = (difficulty === 4) ? 3 : (difficulty === 3 ? 2 : 1);
 
             for (var i = 0; i < moves.length; i++) {
                 game.move(moves[i]);
-                var val = alphaBeta(game, depth - 1, -10000, 10000, true);
+                var val = minimax(game, depth - 1, -100000, 100000, true);
                 game.undo();
                 if (val <= bestValue) {
                     bestValue = val;
@@ -114,7 +120,7 @@
             return bestMove;
         }
 
-        // --- UI I IGRA ---
+        // --- UI ---
         var board = Chessboard('board', {
             position: 'start',
             draggable: false,
@@ -128,23 +134,13 @@
         }
 
         function aiMove() {
-            var moves = game.moves();
-            if (moves.length === 0) return;
-
-            var move;
-            if (difficulty === 1) move = moves[Math.floor(Math.random() * moves.length)];
-            else if (difficulty === 2) {
-                var caps = moves.filter(m => m.includes('x'));
-                move = caps.length > 0 ? caps[0] : moves[Math.floor(Math.random() * moves.length)];
-            } else {
-                move = getBestMove();
-            }
-
+            var move = getBestMove();
+            if (!move) return;
             game.move(move);
             board.position(game.fen());
             document.getElementById('move-snd').play();
             if (game.in_checkmate()) {
-                $('#game-result').fadeIn();
+                $('#game-result').show();
                 document.getElementById('win-snd').play();
             }
         }
@@ -157,8 +153,8 @@
                     board.position(game.fen());
                     document.getElementById('move-snd').play();
                     selectedSquare = null;
-                    if (!game.game_over()) setTimeout(aiMove, 400);
-                    else if(game.in_checkmate()) { $('#game-result').fadeIn(); document.getElementById('win-snd').play(); }
+                    if (!game.game_over()) setTimeout(aiMove, 300);
+                    else if(game.in_checkmate()) { $('#game-result').show(); document.getElementById('win-snd').play(); }
                 } else {
                     selectedSquare = square;
                 }
