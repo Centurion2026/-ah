@@ -1,0 +1,54 @@
+﻿<!DOCTYPE html>
+<html lang="bs">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Šah (by Alan Catovic)</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Online Stockfish protivnik</p>
+          <h1>Šah <span>(by Alan Catovic)</span></h1>
+          <p class="subtitle">
+            Povuci figuru, odigraj potez i igraj protiv Stockfish engine-a u browseru.
+          </p>
+        </div>
+        <div class="controls">
+          <button id="new-game" type="button">Nova partija</button>
+          <button id="toggle-music" type="button">Muzika: ukljucena</button>
+        </div>
+      </header>
+
+      <main class="board-layout">
+        <section class="board-panel">
+          <div class="board-frame">
+            <div id="board" class="board" aria-label="Sahovska tabla"></div>
+            <div id="drag-piece" class="drag-piece" aria-hidden="true"></div>
+            <div id="mate-banner" class="mate-banner hidden">Mat!</div>
+          </div>
+        </section>
+
+        <aside class="side-panel">
+          <div class="status-card">
+            <h2>Status</h2>
+            <p id="status-text">Ti si bijeli. Povuci prvi potez.</p>
+          </div>
+
+          <div class="status-card">
+            <h2>Zadnji potez</h2>
+            <p id="last-move-text">Jos nema poteza.</p>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <audio id="sevdah-track" preload="auto" loop>
+      <source src="./assets/safet-isovic.mp3" type="audio/mpeg" />
+    </audio>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
