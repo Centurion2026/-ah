@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html lang="bs">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sah (by alan Catovic)</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Online Stockfish protivnik</p>
+          <h1>Sah <span>(by alan Catovic)</span></h1>
+          <p class="subtitle">
+            Povuci figuru, odigraj potez i igraj protiv Stockfish engine-a u browseru.
+          </p>
+        </div>
+        <div class="controls">
+          <button id="new-game" type="button">Nova partija</button>
+          <button id="toggle-music" type="button">Muzika: ukljucena</button>
+        </div>
+      </header>
+
+      <main class="board-layout">
+        <section class="board-panel">
+          <div class="board-frame">
+            <div id="board" class="board" aria-label="Sahovska tabla"></div>
+            <div id="drag-piece" class="drag-piece" aria-hidden="true"></div>
+            <div id="mate-banner" class="mate-banner hidden">Mat!</div>
+          </div>
+        </section>
+
+        <aside class="side-panel">
+          <div class="status-card">
+            <h2>Status</h2>
+            <p id="status-text">Ti si bijeli. Povuci prvi potez.</p>
+          </div>
+
+          <div class="status-card">
+            <h2>Zadnji potez</h2>
+            <p id="last-move-text">Jos nema poteza.</p>
+          </div>
+
+          <div class="status-card small">
+            <h2>Efekti</h2>
+            <p>Klik pri podizanju i spustanju figure.</p>
+            <p>Zuti trag ostaje iza zadnjeg poteza.</p>
+            <p>Opustajuca muzika krece nakon prvog klika.</p>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
