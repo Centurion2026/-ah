@@ -6,20 +6,13 @@
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
         body { background: #0f0c29; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; font-family: sans-serif; }
-        #board { width: 90vw; max-width: 400px; }
+        #board { width: 400px; }
     </style>
 </head>
 <body>
-    
-// Ovo radi jer je stockfish.js u istoj mapi na tvom GitHubu
-var stockfish = new Worker('stockfish.js');
+
     <h1>Šah vs Stockfish</h1>
     <div id="board"></div>
-
-    var board = Chessboard('board', {
-    position: 'start',
-    pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
-});
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
@@ -28,14 +21,14 @@ var stockfish = new Worker('stockfish.js');
     <script>
         var game = new Chess();
         
-        // Inicijalizacija ploče s fiksnom putanjom do slika
+        // Inicijalizacija ploče s točnim CDN linkom za figure
         var board = Chessboard('board', {
             position: 'start',
             pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
         });
 
-        // Učitavanje Stockfish-a direktno preko Githack CDN-a
-        var stockfish = new Worker('https://raw.githack.com/nmrugg/stockfish.js/master/stockfish.js');
+        // Učitavanje lokalnog fajla - OSIGURAJ SE DA JE IME 'stockfish.js'
+        var stockfish = new Worker('stockfish.js');
 
         stockfish.onmessage = function(e) {
             if (e.data.startsWith('bestmove')) {
@@ -45,11 +38,9 @@ var stockfish = new Worker('stockfish.js');
             }
         };
 
-        // Jednostavan klik za testiranje
         $('#board').on('click', '.square-55d63', function() {
             var sq = $(this).attr('data-square');
-            // Logika pomicanja bi išla ovdje
-            console.log("Kliknuto polje: " + sq);
+            console.log("Kliknuto: " + sq);
         });
     </script>
 </body>
