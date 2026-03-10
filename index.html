@@ -5,31 +5,32 @@
     <title>Sah (by Alan Catovic)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; background: #1a1a2e; color: #ffffff; padding: 20px; margin: 0; }
-        h1 { margin-bottom: 20px; letter-spacing: 2px; text-transform: uppercase; color: #00d2ff; text-shadow: 0 0 10px rgba(0,210,255,0.3); }
-        #board { width: 550px; max-width: 95vw; border: 8px solid #16213e; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .controls { margin-top: 25px; display: flex; gap: 10px; }
-        button { padding: 12px 24px; cursor: pointer; background: #0f3460; color: white; border: 2px solid #e94560; border-radius: 5px; font-weight: bold; transition: all 0.3s; }
-        button:hover { background: #e94560; transform: translateY(-2px); }
-        button.active { background: #e94560; box-shadow: 0 0 15px rgba(233, 69, 96, 0.4); }
-        .reset-btn { margin-top: 15px; background: transparent; border: 1px solid #533483; color: #533483; }
-        .reset-btn:hover { background: #533483; color: white; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #1a1a2e; color: #ffffff; padding: 20px; margin: 0; }
+        h1 { margin-bottom: 5px; color: #00d2ff; text-transform: uppercase; letter-spacing: 3px; }
+        #board { width: 550px; max-width: 95vw; border: 8px solid #16213e; border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,0.7); }
+        .controls { margin-top: 20px; display: flex; gap: 10px; }
+        button { padding: 12px 20px; cursor: pointer; background: #0f3460; color: white; border: 2px solid #e94560; border-radius: 5px; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #e94560; }
+        button.active { background: #e94560; box-shadow: 0 0 15px #e94560; }
+        #game-result { margin-top: 20px; font-size: 3rem; font-weight: bold; color: #ff0044; text-shadow: 0 0 20px #ff0044; display: none; }
+        .author { color: #00d2ff; opacity: 0.6; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
     <h1>Sah</h1>
-    <p style="margin-top: -15px; margin-bottom: 20px; color: #00d2ff; opacity: 0.7;">by Alan Catovic</p>
+    <p class="author">by Alan Catovic</p>
 
     <div id="board"></div>
+    <div id="game-result">MAT!</div>
 
     <div class="controls">
         <button onclick="setLvl(1, this)">Početnik</button>
-        <button onclick="setLvl(2, this)" class="active">Srednji</button>
-        <button onclick="setLvl(3, this)">Napredni</button>
+        <button onclick="setLvl(2, this)">Srednji</button>
+        <button onclick="setLvl(3, this)" class="active">Napredni (AI)</button>
     </div>
 
-    <button class="reset-btn" onclick="location.reload()">Resetiraj igru</button>
+    <button style="margin-top: 20px; background: #533483; border: none;" onclick="location.reload()">Nova Igra</button>
 
     <audio id="move-snd" src="https://images.chesscomfiles.com/chess-themes/sounds/_standard/default/move-self.mp3"></audio>
     <audio id="win-snd" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
@@ -40,8 +41,66 @@
 
     <script>
         var game = new Chess();
-        var difficulty = 2;
+        var difficulty = 3; 
         var selectedSquare = null;
+
+        // Vrijednosti figura za napredni nivo
+        var pieceValues = { p: 10, n: 30, b: 30, r: 50, q: 90, k: 900 };
+
+        function evaluateBoard(currentBoard) {
+            var totalEvaluation = 0;
+            for (var i = 0; i < 8; i++) {
+                for (var j = 0; j < 8; j++) {
+                    totalEvaluation += getPieceValue(currentBoard[i][j], i, j);
+                }
+            }
+            return totalEvaluation;
+        }
+
+        function getPieceValue(piece, x, y) {
+            if (piece === null) return 0;
+            var val = pieceValues[piece.type];
+            return piece.color === 'w' ? val : -val;
+        }
+
+        function minimax(game, depth, isMaximizingPlayer) {
+            if (depth === 0) return -evaluateBoard(game.board());
+            var moves = game.moves();
+            if (isMaximizingPlayer) {
+                var bestEval = -9999;
+                for (var i = 0; i < moves.length; i++) {
+                    game.move(moves[i]);
+                    bestEval = Math.max(bestEval, minimax(game, depth - 1, !isMaximizingPlayer));
+                    game.undo();
+                }
+                return bestEval;
+            } else {
+                var bestEval = 9999;
+                for (var i = 0; i < moves.length; i++) {
+                    game.move(moves[i]);
+                    bestEval = Math.min(bestEval, minimax(game, depth - 1, !isMaximizingPlayer));
+                    game.undo();
+                }
+                return bestEval;
+            }
+        }
+
+        function getBestMove() {
+            var moves = game.moves();
+            var bestMove = null;
+            var bestValue = 9999;
+
+            for (var i = 0; i < moves.length; i++) {
+                game.move(moves[i]);
+                var boardValue = minimax(game, 2, true);
+                game.undo();
+                if (boardValue <= bestValue) {
+                    bestValue = boardValue;
+                    bestMove = moves[i];
+                }
+            }
+            return bestMove;
+        }
 
         var board = Chessboard('board', {
             position: 'start',
@@ -55,12 +114,6 @@
             $(btn).addClass('active');
         }
 
-        function playSnd(type) {
-            var s = document.getElementById(type === 'win' ? 'win-snd' : 'move-snd');
-            s.currentTime = 0;
-            s.play().catch(() => {});
-        }
-
         function aiMove() {
             var moves = game.moves();
             if (moves.length === 0) return;
@@ -69,41 +122,41 @@
             if (difficulty === 1) {
                 move = moves[Math.floor(Math.random() * moves.length)];
             } else if (difficulty === 2) {
-                // Srednji: Uzima figure ako može
                 var captures = moves.filter(m => m.includes('x'));
                 move = captures.length > 0 ? captures[0] : moves[Math.floor(Math.random() * moves.length)];
             } else {
-                // Napredni: Traži šah ili mat, inače uzima najjaču figuru
-                var priority = moves.filter(m => m.includes('#') || m.includes('+') || m.includes('x'));
-                move = priority.length > 0 ? priority[0] : moves[0];
+                move = getBestMove(); // Poziv napredne logike
             }
 
             game.move(move);
             board.position(game.fen());
-            playSnd('move');
-            if (game.game_over()) playSnd('win');
+            document.getElementById('move-snd').play();
+            checkGameOver();
+        }
+
+        function checkGameOver() {
+            if (game.in_checkmate()) {
+                $('#game-result').fadeIn();
+                document.getElementById('win-snd').play();
+            }
         }
 
         $('#board').on('click', '.square-55d63', function() {
             var square = $(this).attr('data-square');
-            
             if (selectedSquare) {
                 var move = game.move({ from: selectedSquare, to: square, promotion: 'q' });
                 if (move) {
                     board.position(game.fen());
-                    playSnd('move');
+                    document.getElementById('move-snd').play();
                     selectedSquare = null;
-                    if (game.game_over()) {
-                        playSnd('win');
-                    } else {
-                        setTimeout(aiMove, 600);
-                    }
+                    if (!game.game_over()) setTimeout(aiMove, 500);
+                    else checkGameOver();
                 } else {
                     selectedSquare = square;
                 }
             } else {
-                var piece = game.get(square);
-                if (piece && piece.color === 'w') selectedSquare = square;
+                var p = game.get(square);
+                if (p && p.color === 'w') selectedSquare = square;
             }
         });
     </script>
