@@ -5,13 +5,11 @@
     <title>Sah (by Alan Catovic)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #2c3e50; color: white; padding: 20px; }
-        /* Povećana tabla */
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #2c3e50; color: white; padding: 20px; }
         #board { width: 500px; max-width: 95vw; border: 5px solid #34495e; }
         .info-box { background: #34495e; padding: 20px; border-radius: 10px; text-align: center; width: 500px; max-width: 95vw; margin-top: 20px; }
-        button { padding: 10px 20px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; font-weight: bold; margin: 5px; }
-        button.active { background: #27ae60; }
-        .music-btn { background: #f1c40f; color: #333; }
+        button { padding: 12px 20px; cursor: pointer; background: #e74c3c; border: none; border-radius: 5px; color: white; font-weight: bold; }
+        .music-btn { background: #f1c40f; color: #333; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -20,15 +18,9 @@
     <div id="board"></div>
     
     <div class="info-box">
-        <div id="status" style="font-size: 1.3rem; margin-bottom: 10px;">Bijeli na potezu</div>
-        <button class="music-btn" onclick="toggleMusic()">🎵 Pokreni Sevdah</button>
-        <div style="margin-top: 10px;">
-            <button onclick="setDifficulty(1)" id="btn1">Lako</button>
-            <button onclick="setDifficulty(2)" id="btn2" class="active">Srednje</button>
-            <button onclick="setDifficulty(3)" id="btn3">Teško</button>
-        </div>
+        <button class="music-btn" onclick="playMusic()">🎵 Pokreni Sevdah</button>
+        <div id="status">Klikni na figuru za početak</div>
     </div>
-    <button onclick="resetGame()" style="background:#7f8c8d; margin-top:10px;">Nova igra</button>
 
     <audio id="move-sound" src="https://images.chesscomfiles.com/chess-themes/sounds/_standard/default/move-self.mp3"></audio>
     <audio id="bg-music" loop src="https://archive.org/download/sevdah-muzika-iz-bosne/Sevdah.mp3"></audio>
@@ -38,64 +30,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 
     <script>
-        var board = null;
         var game = new Chess();
-        var difficulty = 2;
-
-        function toggleMusic() {
-            var music = document.getElementById('bg-music');
-            if (music.paused) music.play();
-            else music.pause();
-        }
-
-        function playMoveSound() {
-            var sound = document.getElementById('move-sound');
-            sound.currentTime = 0;
-            sound.play();
-        }
-
-        function setDifficulty(lvl) {
-            difficulty = lvl;
-            $('.info-box button').removeClass('active');
-            $('#btn' + lvl).addClass('active');
-        }
-
-        function onSquareClick(square) {
-            if (game.game_over() || game.turn() === 'b') return;
-            // ... (logika za potez ostaje ista)
-            var move = game.move({ from: sourceSquare || square, to: square, promotion: 'q' });
-            if (move) {
-                board.position(game.fen());
-                playMoveSound(); // ZVUK SE OVDJE OKIDA
-                updateStatus();
-                window.setTimeout(makeAiMove, 500);
-            } else {
-                sourceSquare = square;
-            }
-        }
-
-        // ... (ostatak koda za makeAiMove, updateStatus i resetGame)
-        function makeAiMove() {
-            var moves = game.moves();
-            if (moves.length > 0) {
-                game.move(moves[0]);
-                board.position(game.fen());
-                playMoveSound();
-                updateStatus();
-            }
-        }
-
-        function updateStatus() {
-            $('#status').text(game.turn() === 'w' ? 'Tvoj red (Bijeli)' : 'AI razmišlja...');
-        }
-
-        board = Chessboard('board', {
+        var board = Chessboard('board', {
             position: 'start',
             pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
         });
 
+        function playMusic() {
+            var audio = document.getElementById('bg-music');
+            audio.play().then(() => { alert("Glazba svira!"); }).catch(e => { alert("Klikni negdje na stranicu pa probaj ponovo."); });
+        }
+
+        // Osnovna logika pomicanja
         $('#board').on('click', '.square-55d63', function() {
-            onSquareClick($(this).attr('data-square'));
+            var square = $(this).attr('data-square');
+            // Jednostavan test - ako klikneš, odigraj potez
+            console.log("Kliknuto polje: " + square);
+            document.getElementById('move-sound').play();
+            $('#status').text("Potez: " + square);
         });
     </script>
 </body>
