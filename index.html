@@ -2,29 +2,31 @@
 <html lang="hr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sah (by Alan Catovic)</title>
-    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
     <style>
-        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #2c3e50; color: white; padding: 20px; }
-        #board { width: 400px; max-width: 90vw; border: 5px solid #34495e; border-radius: 5px; }
-        .info { margin-top: 15px; background: #34495e; padding: 15px; border-radius: 10px; text-align: center; min-width: 320px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .highlight { box-shadow: inset 0 0 3px 3px rgba(255, 255, 0, 0.75); }
-        .controls { margin-top: 15px; display: flex; gap: 10px; }
-        button { padding: 10px 15px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; font-weight: bold; }
-        button:hover { background: #c0392b; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; background: #2c3e50; color: white; padding: 10px; margin: 0; }
+        h1 { margin: 10px 0 5px 0; }
+        #board { width: 380px; max-width: 95vw; margin: 10px auto; border: 4px solid #34495e; }
+        .info-box { background: #34495e; padding: 15px; border-radius: 10px; text-align: center; width: 350px; max-width: 90vw; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .controls { display: flex; justify-content: center; gap: 5px; margin-top: 10px; }
+        button { padding: 8px 12px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 4px; font-weight: bold; }
         button.active { background: #27ae60; }
-        .status-text { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; }
+        .status-text { font-size: 1.1rem; font-weight: bold; margin-bottom: 8px; color: #ecf0f1; }
+        .reset-btn { margin-top: 20px; background: #95a5a6; padding: 10px 20px; }
+        .highlight { box-shadow: inset 0 0 3px 3px yellow; }
     </style>
 </head>
 <body>
 
     <h1>Sah</h1>
-    <p style="margin-top: -10px; color: #bdc3c7;">by Alan Catovic</p>
+    <p style="margin-top: 0; color: #bdc3c7;">by Alan Catovic</p>
     
     <div id="board"></div>
     
-    <div class="info">
-        <div id="status" class="status-text">Tvoj red (Bijeli)</div>
+    <div class="info-box">
+        <div id="status" class="status-text">Bijeli na potezu</div>
         <div class="controls">
             <button onclick="setDifficulty(1)" id="btn1">Lako</button>
             <button onclick="setDifficulty(2)" id="btn2" class="active">Srednje</button>
@@ -32,56 +34,26 @@
         </div>
     </div>
     
-    <button style="margin-top: 30px; background: #7f8c8d;" onclick="resetGame()">Nova igra</button>
+    <button class="reset-btn" onclick="resetGame()">Nova igra</button>
 
-    <audio id="move-sound" src="https://upload.wikimedia.org/wikipedia/commons/b/b1/Chess_move.ogg"></audio>
+    <audio id="move-sound" preload="auto">
+        <source src="https://images.chesscomfiles.com/chess-themes/sounds/_standard/default/move-self.mp3" type="audio/mpeg">
+    </audio>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 
     <script>
         var board = null;
         var game = new Chess();
-        var moveSound = document.getElementById('move-sound');
         var sourceSquare = null;
-        var difficulty = 2; // Default: Srednje
+        var difficulty = 2;
 
         function setDifficulty(lvl) {
             difficulty = lvl;
             $('.controls button').removeClass('active');
             $('#btn' + lvl).addClass('active');
-        }
-
-        // Jednostavan ali brz AI (Minimax algoritam)
-        function makeBestMove() {
-            if (game.game_over()) return;
-
-            var possibleMoves = game.moves();
-            if (possibleMoves.length === 0) return;
-
-            // Simulacija razmišljanja ovisno o težini
-            var moveDelay = 500;
-            if (difficulty === 3) moveDelay = 1000;
-
-            window.setTimeout(function() {
-                // Na "Lako", bira skoro nasumično. Na "Teško", pokušava naći najbolje polje.
-                var move;
-                if (difficulty === 1) {
-                    move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-                } else {
-                    // Sortiranje poteza - hvatanje figura ima prednost
-                    possibleMoves.sort(function(a, b) {
-                        return (b.indexOf('x') !== -1 ? 1 : 0) - (a.indexOf('x') !== -1 ? 1 : 0);
-                    });
-                    move = possibleMoves[0];
-                }
-
-                game.move(move);
-                board.position(game.fen());
-                moveSound.play();
-                updateStatus();
-            }, moveDelay);
         }
 
         function onSquareClick(square) {
@@ -98,31 +70,87 @@
                     var piece = game.get(square);
                     if (piece && piece.color === 'w') {
                         sourceSquare = square;
-                        removeHighlights();
-                        $('#board .square-' + square).addClass('highlight');
+                        $('.square-55d63').removeClass('highlight');
+                        $('.square-' + square).addClass('highlight');
                     }
                     return;
                 }
 
                 board.position(game.fen());
-                moveSound.play();
+                playSound();
                 sourceSquare = null;
-                removeHighlights();
+                $('.square-55d63').removeClass('highlight');
                 updateStatus();
-                makeBestMove();
+                window.setTimeout(makeAiMove, 500);
             } else {
                 var piece = game.get(square);
                 if (piece && piece.color === 'w') {
                     sourceSquare = square;
-                    removeHighlights();
-                    $('#board .square-' + square).addClass('highlight');
+                    $('.square-55d63').removeClass('highlight');
+                    $('.square-' + square).addClass('highlight');
                 }
             }
         }
 
-        function removeHighlights() {
-            $('#board .square-55d63').removeClass('highlight');
+        function makeAiMove() {
+            var moves = game.moves();
+            if (moves.length === 0) return;
+
+            var selectedMove;
+            if (difficulty === 1) {
+                selectedMove = moves[Math.floor(Math.random() * moves.length)];
+            } else if (difficulty === 2) {
+                // Srednje: preferiraj uzimanje figura
+                var captures = moves.filter(m => m.includes('x'));
+                selectedMove = captures.length > 0 ? captures[Math.floor(Math.random() * captures.length)] : moves[Math.floor(Math.random() * moves.length)];
+            } else {
+                // Teško: Prioritet šah i uzimanje
+                var priority = moves.filter(m => m.includes('#') || m.includes('+') || m.includes('x'));
+                selectedMove = priority.length > 0 ? priority[0] : moves[0];
+            }
+
+            game.move(selectedMove);
+            board.position(game.fen());
+            playSound();
+            updateStatus();
+        }
+
+        function playSound() {
+            var audio = document.getElementById('move-sound');
+            audio.currentTime = 0;
+            audio.play().catch(function(e) { console.log("Audio play blocked"); });
         }
 
         function updateStatus() {
-            var status = '';
+            var status = game.turn() === 'w' ? 'Tvoj red (Bijeli)' : 'AI razmišlja...';
+            if (game.in_checkmate()) status = 'MAT! Kraj igre.';
+            else if (game.in_draw()) status = 'REMI!';
+            else if (game.in_check()) status += ' - ŠAH!';
+            $('#status').text(status);
+        }
+
+        // Inicijalizacija ploče
+        $(document).ready(function() {
+            board = Chessboard('board', {
+                position: 'start',
+                draggable: false,
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+            });
+
+            $('#board').on('click', '.square-55d63', function() {
+                var square = $(this).attr('data-square');
+                onSquareClick(square);
+            });
+            updateStatus();
+        });
+
+        function resetGame() {
+            game.reset();
+            board.start();
+            sourceSquare = null;
+            $('.square-55d63').removeClass('highlight');
+            updateStatus();
+        }
+    </script>
+</body>
+</html>
