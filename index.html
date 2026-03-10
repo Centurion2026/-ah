@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
     <style>
         body { background: #0f0c29; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; font-family: sans-serif; }
-        #board { width: 400px; }
+        #board { width: 90vw; max-width: 400px; }
     </style>
 </head>
 <body>
@@ -20,15 +20,15 @@
 
     <script>
         var game = new Chess();
-        // Ovdje koristimo gotov link, ne treba ti lokalni fajl!
-        var stockfish = new Worker('https://raw.githack.com/nmrugg/stockfish.js/master/stockfish.js');
         
+        // Inicijalizacija ploče s fiksnom putanjom do slika
         var board = Chessboard('board', {
             position: 'start',
-            pieceTheme: 'https://raw.githubusercontent.com/oakmac/chessboardjs/master/website/img/chesspieces/wikipedia/{piece}.png'
+            pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/img/chesspieces/wikipedia/{piece}.png'
         });
 
-        stockfish.postMessage('uci');
+        // Učitavanje Stockfish-a direktno preko Githack CDN-a
+        var stockfish = new Worker('https://raw.githack.com/nmrugg/stockfish.js/master/stockfish.js');
 
         stockfish.onmessage = function(e) {
             if (e.data.startsWith('bestmove')) {
@@ -38,12 +38,11 @@
             }
         };
 
+        // Jednostavan klik za testiranje
         $('#board').on('click', '.square-55d63', function() {
             var sq = $(this).attr('data-square');
-            var m = game.move({ from: sq, to: sq, promotion: 'q' }); // Ovdje bi išla tvoja logika za klik
-            // ...
-            stockfish.postMessage('position fen ' + game.fen());
-            stockfish.postMessage('go depth 10');
+            // Logika pomicanja bi išla ovdje
+            console.log("Kliknuto polje: " + sq);
         });
     </script>
 </body>
